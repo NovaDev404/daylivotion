@@ -4,17 +4,18 @@ A web application that generates daily Bible devotions using AI-powered verse se
 
 ## Features
 
-- **AI-Generated Verse Selection**: Uses llama-3-bible-dpo model to intelligently select the best verse for devotion
+- **AI-Generated Verse Selection**: Uses Meta Llama 3.1 8B Instruct model to intelligently select the best verse for devotion
 - **Random Verse Generation**: Automatically generates 9 random verses from the UDB Bible
 - **Smart Selection**: AI picks the most suitable verse from 10 candidates (1 AI-generated + 9 random)
+- **Audio Devotion**: Realistic AI generated audio devotion with background music
 - **Web Interface**: Simple, clean web interface with a "Generate Devotion" button
 
 ## Requirements
 
 - Python 3.7+
-- llama-cli (llama.cpp command line tool)
-- Vulkan support for GPU acceleration
-- Unlocked Dynamic Bible (UDB) files in USFM format
+- llama.cpp CLI
+- GPU support for AI GPU acceleration
+- Unlocked Dynamic Bible (UDB) files in USFM format (Cloned from https://git.door43.org/WycliffeAssociates/en_udb/)
 
 ## Setup
 
@@ -61,7 +62,7 @@ This will generate a devotion and print it to the terminal.
 2. **Random Verse Generation**: 9 additional random verses are selected from the UDB Bible
 3. **Content Retrieval**: The actual verse text is retrieved from the USFM Bible files
 4. **AI Selection**: All 10 verses are sent to the AI, which selects the best one for devotion
-5. **Output**: The selected verse is displayed (on web or terminal)
+5. **Output**: The selected verse is displayed (on web)
 
 ## File Structure
 

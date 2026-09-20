@@ -1,0 +1,699 @@
+<!-- Daylivotion is off until I can fix the AI. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daylivotion - Daily Devotion Generator</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/daylivotion.png') }}">
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="{{ url_for('sitemap') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.3/socket.io.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto">
+            <div class="flex flex-col items-center mb-8">
+                <img src="{{ url_for('static', filename='images/daylivotion_nobg.png') }}" alt="Daylivotion" class="mb-4" style="width: 200px;">
+                <h1 class="text-4xl font-bold text-center text-blue-800 mb-2">Daylivotion</h1>
+            </div>
+            <p class="text-center text-gray-600 mb-8">Generate your daily Bible devotion</p>
+            
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <button 
+                    id="generateBtn"
+                    onclick="generateDevotion()"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center gap-2"
+                >
+                    Generate Devotion
+                </button>
+                
+                <div id="loading" class="hidden mt-6">
+                    <div class="w-full bg-gray-200 rounded-full h-4 mb-4">
+                        <div id="progressBar" class="bg-blue-600 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span id="loadingMessage" class="text-gray-600">Generating devotion...</span>
+                        <span id="countdown" class="text-gray-500 font-semibold"></span>
+                    </div>
+                </div>
+                
+                <div id="result" class="hidden mt-6">
+                    <div class="border-t pt-6">
+                        <div class="flex items-start justify-between mb-4">
+                            <h2 id="verseRef" class="text-2xl font-bold text-blue-800"></h2>
+                            <div class="flex items-center gap-3">
+                                <button 
+                                    id="audioBtn"
+                                    onclick="playAudio()"
+                                    class="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center transition duration-200 shadow-lg"
+                                    title="Generate Audio Devotion"
+                                >
+                                    <svg id="speakerIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                    </svg>
+                                </button>
+                                <div id="audioControls" class="hidden flex items-center gap-3">
+                                    <button 
+                                        id="rewindBtn"
+                                        onclick="rewindAudio()"
+                                        class="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center justify-center transition duration-200"
+                                        title="Rewind 10 seconds"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+                                        </svg>
+                                    </button>
+                                    <button 
+                                        id="forwardBtn"
+                                        onclick="forwardAudio()"
+                                        class="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center justify-center transition duration-200"
+                                        title="Forward 10 seconds"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z" />
+                                        </svg>
+                                    </button>
+                                    <select 
+                                        id="speedControl"
+                                        onchange="changeSpeed()"
+                                        class="px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="0.5">0.5x</option>
+                                        <option value="0.75">0.75x</option>
+                                        <option value="1" selected>1x</option>
+                                        <option value="1.25">1.25x</option>
+                                        <option value="1.5">1.5x</option>
+                                        <option value="2">2x</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="audioProgressContainer" class="hidden mb-4">
+                            <div id="audioGenerationProgress" class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div id="audioProgressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                            <p id="audioProgressText" class="text-sm text-gray-600 mt-1"></p>
+                        </div>
+                        <div id="audioPlaybackContainer" class="hidden mb-4">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 cursor-pointer" onclick="seekAudio(event)">
+                                <div id="audioPlaybackProgressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                            <div class="flex justify-between items-center mt-1">
+                                <p id="audioTimeText" class="text-sm text-gray-600">0:00 / 0:00</p>
+                            </div>
+                        </div>
+                        <p id="verseContent" class="text-gray-700 leading-relaxed text-lg mb-6"></p>
+                        
+                        <div class="bg-blue-50 rounded-lg p-6 mb-6">
+                            <h3 class="text-xl font-semibold text-blue-800 mb-3">Devotion</h3>
+                            <p id="devotionContent" class="text-gray-700 leading-relaxed"></p>
+                        </div>
+                        
+                        <div class="bg-green-50 rounded-lg p-6">
+                            <h3 class="text-xl font-semibold text-green-800 mb-3">Prayer</h3>
+                            <p id="prayerContent" class="text-gray-700 leading-relaxed italic"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="streamingResult" class="hidden mt-6">
+                    <div class="border-t pt-6">
+                        <h2 id="streamingVerseRef" class="text-2xl font-bold text-blue-800 mb-4"></h2>
+                        <p id="streamingVerseContent" class="text-gray-700 leading-relaxed text-lg mb-6"></p>
+                        
+                        <div class="bg-blue-50 rounded-lg p-6 mb-6">
+                            <h3 class="text-xl font-semibold text-blue-800 mb-3">Devotion</h3>
+                            <p id="streamingDevotionContent" class="text-gray-700 leading-relaxed"></p>
+                        </div>
+                        
+                        <div class="bg-green-50 rounded-lg p-6 hidden" id="streamingPrayerContainer">
+                            <h3 class="text-xl font-semibold text-green-800 mb-3">Prayer</h3>
+                            <p id="streamingPrayerContent" class="text-gray-700 leading-relaxed italic"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="error" class="hidden mt-6">
+                    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                        <p id="errorMessage"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8 text-center text-gray-500 text-sm">
+                <p>Powered by Meta Llama 3.1, Kokoro TTS, and the UDB Bible.<br><i>Original work of the Unlocked Dynamic Bible in English available at <a href="https://unfoldingword.org/udb/" target="_blank">https://unfoldingword.org/udb/</a>.</i></p>
+                <p class="mt-2">Created by <a href="https://github.com/NovaDev404" target="_blank" class="text-blue-600 hover:text-blue-800">NovaDev404</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let countdownInterval = null;
+        let currentPosition = null;
+        let loadingCountdownInterval = null;
+        let socket = null;
+        let currentStep = null;
+        let currentDevotionData = null;
+        let audioElement = null;
+        let isPlaying = false;
+        
+        // Initialize socket connection
+        function initSocket() {
+            if (socket) {
+                socket.disconnect();
+            }
+            socket = io();
+            
+            socket.on('progress', function(data) {
+                const loading = document.getElementById('loading');
+                const loadingMessage = document.getElementById('loadingMessage');
+                const countdown = document.getElementById('countdown');
+                const progressBar = document.getElementById('progressBar');
+                const result = document.getElementById('result');
+                const streamingResult = document.getElementById('streamingResult');
+                const error = document.getElementById('error');
+                const btn = document.getElementById('generateBtn');
+                
+                if (data.status === 'waiting') {
+                    // Parse position and estimated wait from message
+                    const positionMatch = data.message.match(/position: (\d+)/);
+                    const waitMatch = data.message.match(/estimated wait: (\d+)s/);
+                    
+                    if (positionMatch && waitMatch) {
+                        const position = parseInt(positionMatch[1]);
+                        const newWaitTime = parseInt(waitMatch[1]);
+                        
+                        // Only reset countdown if position changed
+                        if (currentPosition !== position) {
+                            currentPosition = position;
+                            if (countdownInterval) clearInterval(countdownInterval);
+                            
+                            let waitTime = newWaitTime;
+                            loadingMessage.textContent = `Waiting in queue (position: ${position})`;
+                            countdown.textContent = `${waitTime}s`;
+                            progressBar.style.width = '0%';
+                            
+                            // Start countdown
+                            countdownInterval = setInterval(() => {
+                                waitTime = Math.max(0, waitTime - 1);
+                                countdown.textContent = `${waitTime}s`;
+                            }, 1000);
+                        }
+                    } else {
+                        loadingMessage.textContent = data.message;
+                    }
+                } else if (data.status === 'step1' || data.status === 'step2' || data.status === 'step3' || data.status === 'step3a' || data.status === 'step3b' || data.status === 'step3c') {
+                    // Clear queue countdown when we start processing
+                    if (countdownInterval) {
+                        clearInterval(countdownInterval);
+                        countdownInterval = null;
+                    }
+                    currentPosition = null;
+                    
+                    // Update progress bar based on step
+                    if (data.status === 'step1') {
+                        progressBar.style.width = '15%';
+                        currentStep = 'step1';
+                        startLoadingCountdown(15);
+                    } else if (data.status === 'step2') {
+                        progressBar.style.width = '30%';
+                        currentStep = 'step2';
+                        startLoadingCountdown(15);
+                    } else if (data.status === 'step3' || data.status === 'step3a' || data.status === 'step3b' || data.status === 'step3c') {
+                        if (currentStep !== 'step3') {
+                            currentStep = 'step3';
+                            // Start from 30% and animate to 100%
+                            animateProgressBar(30, 100, 15);
+                            startLoadingCountdown(15);
+                        }
+                    }
+                    
+                    loadingMessage.textContent = data.message;
+                } else if (data.status === 'streaming_devotion') {
+                    // Show streaming result (keep loading visible for progress bar)
+                    streamingResult.classList.remove('hidden');
+                    
+                    // Update devotion content with markdown parsing
+                    document.getElementById('streamingDevotionContent').innerHTML = parseMarkdown(data.devotion_full);
+                    
+                    // Store reference and content for later
+                    if (data.reference) {
+                        document.getElementById('streamingVerseRef').textContent = data.reference;
+                    }
+                    if (data.content) {
+                        document.getElementById('streamingVerseContent').textContent = data.content;
+                    }
+                } else if (data.status === 'streaming_prayer') {
+                    // Show prayer container
+                    document.getElementById('streamingPrayerContainer').classList.remove('hidden');
+                    
+                    // Update prayer content with markdown parsing
+                    document.getElementById('streamingPrayerContent').innerHTML = parseMarkdown(data.prayer_full);
+                } else if (data.status === 'success') {
+                    if (countdownInterval) {
+                        clearInterval(countdownInterval);
+                        countdownInterval = null;
+                    }
+                    if (loadingCountdownInterval) {
+                        clearInterval(loadingCountdownInterval);
+                        loadingCountdownInterval = null;
+                    }
+                    progressBar.style.width = '100%';
+                    countdown.textContent = '';
+                    loading.classList.add('hidden');
+                    streamingResult.classList.add('hidden');
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    document.getElementById('verseRef').textContent = data.reference;
+                    document.getElementById('verseContent').textContent = data.content;
+                    document.getElementById('devotionContent').innerHTML = parseMarkdown(data.devotion);
+                    document.getElementById('prayerContent').innerHTML = parseMarkdown(data.prayer);
+                    result.classList.remove('hidden');
+                    
+                    // Store devotion data for audio generation
+                    currentDevotionData = {
+                        reference: data.reference,
+                        content: data.content,
+                        devotion: data.devotion,
+                        prayer: data.prayer
+                    };
+                } else if (data.status === 'error') {
+                    if (countdownInterval) {
+                        clearInterval(countdownInterval);
+                        countdownInterval = null;
+                    }
+                    if (loadingCountdownInterval) {
+                        clearInterval(loadingCountdownInterval);
+                        loadingCountdownInterval = null;
+                    }
+                    loading.classList.add('hidden');
+                    streamingResult.classList.add('hidden');
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    document.getElementById('errorMessage').textContent = data.error || 'Failed to generate devotion';
+                    error.classList.remove('hidden');
+                } else if (data.status === 'cancelled') {
+                    if (countdownInterval) {
+                        clearInterval(countdownInterval);
+                        countdownInterval = null;
+                    }
+                    if (loadingCountdownInterval) {
+                        clearInterval(loadingCountdownInterval);
+                        loadingCountdownInterval = null;
+                    }
+                    loading.classList.add('hidden');
+                    streamingResult.classList.add('hidden');
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    document.getElementById('errorMessage').textContent = 'Generation cancelled';
+                    error.classList.remove('hidden');
+                } else if (data.status === 'complete') {
+                    loadingMessage.textContent = data.message;
+                }
+            });
+            
+            socket.on('connect_error', function(err) {
+                const loading = document.getElementById('loading');
+                const error = document.getElementById('error');
+                const btn = document.getElementById('generateBtn');
+                
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+                if (loadingCountdownInterval) {
+                    clearInterval(loadingCountdownInterval);
+                    loadingCountdownInterval = null;
+                }
+                loading.classList.add('hidden');
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                document.getElementById('errorMessage').textContent = 'Connection error. Please try again.';
+                error.classList.remove('hidden');
+            });
+        }
+        
+        function startLoadingCountdown(seconds) {
+            const countdown = document.getElementById('countdown');
+            if (loadingCountdownInterval) {
+                clearInterval(loadingCountdownInterval);
+            }
+            
+            let timeLeft = seconds;
+            countdown.textContent = `${timeLeft}s`;
+            
+            loadingCountdownInterval = setInterval(() => {
+                timeLeft = Math.max(0, timeLeft - 1);
+                countdown.textContent = `${timeLeft}s`;
+                if (timeLeft === 0) {
+                    clearInterval(loadingCountdownInterval);
+                    loadingCountdownInterval = null;
+                }
+            }, 1000);
+        }
+        
+        function animateProgressBar(from, to, duration) {
+            const progressBar = document.getElementById('progressBar');
+            const startTime = Date.now();
+            
+            function update() {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const progress = Math.min(elapsed / duration, 1);
+                const currentWidth = from + (to - from) * progress;
+                progressBar.style.width = `${currentWidth}%`;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+            
+            update();
+        }
+        
+        function parseMarkdown(text) {
+            if (!text) return '';
+            // Strip trailing forward slashes and asterisks (preserve backslashes for escape sequences)
+            text = text.replace(/[\/\*]+$/, '');
+            // Escape HTML to prevent XSS
+            let html = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            
+            // Parse ** for bold
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Parse * for italic
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Parse \n for line breaks
+            html = html.replace(/\\n/g, '<br>');
+            
+            return html;
+        }
+        
+        async function playAudio() {
+            if (!currentDevotionData) {
+                alert('No devotion data available');
+                return;
+            }
+            
+            const audioBtn = document.getElementById('audioBtn');
+            const speakerIcon = document.getElementById('speakerIcon');
+            
+            if (isPlaying && audioElement) {
+                // Pause audio
+                audioElement.pause();
+                isPlaying = false;
+                speakerIcon.innerHTML = '<path fill="currentColor" d="M8 5v14l11-7z" />';
+                audioBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                audioBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                return;
+            }
+            
+            // Check if audio is already loaded but paused
+            if (audioElement && !isPlaying) {
+                try {
+                    await audioElement.play();
+                    return;
+                } catch (error) {
+                    console.error('Error resuming audio:', error);
+                    // Fall through to regenerate audio
+                }
+            }
+            
+            // Generate and play audio
+            try {
+                audioBtn.disabled = true;
+                audioBtn.classList.add('opacity-50');
+                
+                // Show generation progress bar
+                const progressContainer = document.getElementById('audioProgressContainer');
+                const progressBar = document.getElementById('audioProgressBar');
+                const progressText = document.getElementById('audioProgressText');
+                if (progressContainer) {
+                    progressContainer.classList.remove('hidden');
+                }
+                if (progressBar) {
+                    progressBar.style.width = '0%';
+                }
+                if (progressText) {
+                    progressText.textContent = 'Generating audio devotion...';
+                }
+                
+                // Listen for audio queue progress
+                socket.on('audio_queue_progress', (data) => {
+                    console.log('Received audio_queue_progress:', data);
+                    if (data.status === 'queue') {
+                        if (progressText) {
+                            progressText.textContent = data.message;
+                        }
+                    }
+                });
+
+                // Listen for audio progress
+                socket.on('audio_progress', (data) => {
+                    if (data.status === 'generating') {
+                        if (progressBar) {
+                            progressBar.style.width = data.progress + '%';
+                        }
+                        if (progressText) {
+                            progressText.textContent = `Generating audio devotion: ${data.current}/${data.total} sentences (${Math.round(data.progress)}%)`;
+                        }
+                    }
+                });
+                
+                const response = await fetch('/generate_audio', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ...currentDevotionData,
+                        sid: socket.id
+                    })
+                });
+                
+                // Remove audio progress listeners
+                socket.off('audio_progress');
+                socket.off('audio_queue_progress');
+                
+                // Hide generation progress container
+                if (progressContainer) {
+                    progressContainer.classList.add('hidden');
+                }
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let error;
+                    try {
+                        error = JSON.parse(errorText);
+                    } catch {
+                        error = { error: errorText || 'Failed to generate audio' };
+                    }
+                    throw new Error(error.error || 'Failed to generate audio');
+                }
+                
+                const audioBlob = await response.blob();
+                
+                // Check if we got valid audio data
+                if (audioBlob.size === 0) {
+                    throw new Error('Received empty audio file');
+                }
+                
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                if (audioElement) {
+                    audioElement.pause();
+                    audioElement.currentTime = 0;
+                    URL.revokeObjectURL(audioElement.src);
+                }
+                
+                audioElement = new Audio(audioUrl);
+                
+                // Set audio attributes for better Safari compatibility
+                audioElement.preload = 'auto';
+                audioElement.crossOrigin = 'anonymous';
+                
+                audioElement.onplay = () => {
+                    isPlaying = true;
+                    speakerIcon.innerHTML = '<rect x="6" y="6" width="12" height="12" fill="currentColor" />';
+                    audioBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    audioBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                    // Show playback container when playing
+                    document.getElementById('audioPlaybackContainer').classList.remove('hidden');
+                    updateAudioProgress();
+                };
+                
+                audioElement.onpause = () => {
+                    isPlaying = false;
+                    speakerIcon.innerHTML = '<path fill="currentColor" d="M8 5v14l11-7z" />';
+                    audioBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    audioBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                };
+                
+                audioElement.onended = () => {
+                    isPlaying = false;
+                    speakerIcon.innerHTML = '<path fill="currentColor" d="M8 5v14l11-7z" />';
+                    audioBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    audioBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                    // Hide playback container when playback ends
+                    document.getElementById('audioPlaybackContainer').classList.add('hidden');
+                };
+
+                audioElement.ontimeupdate = () => {
+                    updateAudioProgress();
+                };
+
+                audioElement.onloadedmetadata = () => {
+                    updateAudioProgress();
+                };
+                
+                audioElement.onerror = (e) => {
+                    console.error('Audio error:', e);
+                    console.error('Audio error code:', audioElement.error);
+                    const errorMessage = audioElement.error ? 
+                        `Audio error: ${audioElement.error.message}` : 
+                        'Unknown audio error';
+                    alert(errorMessage);
+                };
+                
+                // Load the audio before playing
+                await new Promise((resolve, reject) => {
+                    audioElement.onloadeddata = resolve;
+                    audioElement.onerror = reject;
+                    audioElement.load();
+                });
+                
+                // Show full audio controls after audio is ready
+                document.getElementById('audioControls').classList.remove('hidden');
+                
+                // Change icon to play triangle after generation completes
+                speakerIcon.innerHTML = '<path fill="currentColor" d="M8 5v14l11-7z" />';
+                audioBtn.title = 'Play Audio Devotion';
+                
+            } catch (error) {
+                console.error('Error playing audio:', error);
+                
+                // Provide more detailed error message for Safari
+                let errorMessage = 'Failed to play audio: ' + error.message;
+                if (error.name === 'NotSupportedError') {
+                    errorMessage = 'Your browser does not support this audio format. Please try using Safari or Chrome.';
+                } else if (error.name === 'NotAllowedError') {
+                    errorMessage = 'Please tap the play button again to start the audio.';
+                }
+                
+                alert(errorMessage);
+                
+                // Hide progress bar on error
+                const progressContainer = document.getElementById('audioProgressContainer');
+                if (progressContainer) progressContainer.classList.add('hidden');
+            } finally {
+                audioBtn.disabled = false;
+                audioBtn.classList.remove('opacity-50');
+            }
+        }
+
+        function updateAudioProgress() {
+            if (!audioElement) return;
+            
+            const progressBar = document.getElementById('audioPlaybackProgressBar');
+            const timeText = document.getElementById('audioTimeText');
+            
+            if (progressBar && timeText) {
+                const progress = (audioElement.currentTime / audioElement.duration) * 100;
+                progressBar.style.width = `${progress}%`;
+                
+                const current = formatTime(audioElement.currentTime);
+                const total = formatTime(audioElement.duration);
+                timeText.textContent = `${current} / ${total}`;
+            }
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function seekAudio(event) {
+            if (!audioElement) return;
+            
+            const progressContainer = event.currentTarget;
+            const rect = progressContainer.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const percentage = clickX / rect.width;
+            
+            audioElement.currentTime = percentage * audioElement.duration;
+        }
+
+        function rewindAudio() {
+            if (!audioElement) return;
+            audioElement.currentTime = Math.max(0, audioElement.currentTime - 10);
+        }
+
+        function forwardAudio() {
+            if (!audioElement) return;
+            audioElement.currentTime = Math.min(audioElement.duration, audioElement.currentTime + 10);
+        }
+
+        function changeSpeed() {
+            if (!audioElement) return;
+            const speedControl = document.getElementById('speedControl');
+            audioElement.playbackRate = parseFloat(speedControl.value);
+        }
+        
+        // Initialize socket on page load
+        initSocket();
+        
+        async function generateDevotion() {
+            const btn = document.getElementById('generateBtn');
+            const loading = document.getElementById('loading');
+            const loadingMessage = document.getElementById('loadingMessage');
+            const countdown = document.getElementById('countdown');
+            const progressBar = document.getElementById('progressBar');
+            const result = document.getElementById('result');
+            const streamingResult = document.getElementById('streamingResult');
+            const error = document.getElementById('error');
+            
+            // Clear any existing countdown
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            if (loadingCountdownInterval) {
+                clearInterval(loadingCountdownInterval);
+                loadingCountdownInterval = null;
+            }
+            currentPosition = null;
+            currentStep = null;
+            
+            // Reset UI
+            result.classList.add('hidden');
+            streamingResult.classList.add('hidden');
+            error.classList.add('hidden');
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            loading.classList.remove('hidden');
+            loadingMessage.textContent = 'Generating devotion...';
+            countdown.textContent = '';
+            progressBar.style.width = '0%';
+            
+            // Reset streaming content
+            document.getElementById('streamingDevotionContent').textContent = '';
+            document.getElementById('streamingPrayerContent').textContent = '';
+            document.getElementById('streamingPrayerContainer').classList.add('hidden');
+            
+            // Reconnect socket if disconnected
+            if (!socket.connected) {
+                socket.connect();
+            }
+            
+            // Send generation request
+            socket.emit('generate_devotion');
+        }
+    </script>
+</body>
+</html>

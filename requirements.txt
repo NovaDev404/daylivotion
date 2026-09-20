@@ -1,0 +1,12 @@
+Flask
+Flask-SocketIO
+requests
+gunicorn
+gevent
+kokoro
+soundfile
+torch
+pydub
+tailwindcss
+postcss
+autoprefixer

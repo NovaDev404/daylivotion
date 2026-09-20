@@ -16,6 +16,8 @@ A web application that generates daily Bible devotions using AI-powered verse se
 - llama.cpp CLI
 - GPU support for AI GPU acceleration
 - Unlocked Dynamic Bible (UDB) files in USFM format (Cloned from https://git.door43.org/WycliffeAssociates/en_udb/)
+- Background music file
+- Llama 3.1 8B (Download from https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q5_K_M.gguf?download=true)
 
 ## Setup
 
